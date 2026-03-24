@@ -1,17 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './LoginPage.css';
+
+// ✅ Task 1
+import { urlConfig } from '../../config';
+
+// ✅ Task 2
+import { useAppContext } from '../../context/AuthContext';
+
+// ✅ Task 3
+import { useNavigate } from 'react-router-dom';
 
 function LoginPage() {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
+    // ✅ Task 4
+    const [incorrect, setIncorrect] = useState('');
+
+    // ✅ Task 5
+    const navigate = useNavigate();
+    const bearerToken = sessionStorage.getItem('bearer-token');
+    const { setIsLoggedIn } = useAppContext();
+
+    // ✅ Task 6
+    useEffect(() => {
+        if (sessionStorage.getItem('auth-token')) {
+            navigate('/app');
+        }
+    }, [navigate]);
+
     const handleLogin = async () => {
-        console.log("Inside handleLogin");
-        console.log({
-            email,
-            password
-        });
+        try {
+            const res = await fetch(`${urlConfig.backendUrl}/api/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': bearerToken ? `Bearer ${bearerToken}` : '',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                }),
+            });
+
+            const json = await res.json();
+
+            if (json.authtoken) {
+                sessionStorage.setItem('auth-token', json.authtoken);
+                sessionStorage.setItem('name', json.userName);
+                sessionStorage.setItem('email', json.userEmail);
+
+                setIsLoggedIn(true);
+
+                navigate('/app');
+            }
+            else {
+                document.getElementById("email").value = "";
+                document.getElementById("password").value = "";
+
+                setIncorrect("Wrong password. Try again.");
+
+                setTimeout(() => {
+                    setIncorrect("");
+                }, 2000);
+            }
+
+        } catch (e) {
+            console.log("Error fetching details: " + e.message);
+        }
     };
 
     return (
@@ -47,6 +104,20 @@ function LoginPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                             />
                         </div>
+
+                        {incorrect && (
+                            <p className="text-danger text-center">{incorrect}</p>
+                        )}
+
+                        <span style={{
+                            color: 'red',
+                            height: '.5cm',
+                            display: 'block',
+                            fontStyle: 'italic',
+                            fontSize: '12px'
+                        }}>
+                            {incorrect}
+                        </span>
 
                         {/* Login Button */}
                         <button
