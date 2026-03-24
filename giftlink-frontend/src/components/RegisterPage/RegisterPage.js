@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import './RegisterPage.css';
+import { urlConfig } from '../../config';
+import { useAppContext } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 function RegisterPage() {
 
@@ -8,14 +11,49 @@ function RegisterPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
+    const [showerr, setShowerr] = useState('');
+
+    const navigate = useNavigate();
+    const { setIsLoggedIn } = useAppContext();
+
     const handleRegister = async () => {
-        console.log("Register invoked");
-        console.log({
-            firstName,
-            lastName,
-            email,
-            password
-        });
+        try {
+            const response = await fetch(`${urlConfig.backendUrl}/api/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                },
+                body: JSON.stringify({
+                    firstName,
+                    lastName,
+                    email,
+                    password
+                })
+            });
+    
+            const json = await response.json();
+    
+            if (json.authtoken) {
+                sessionStorage.setItem('auth-token', json.authtoken);
+                sessionStorage.setItem('name', firstName);
+                sessionStorage.setItem('email', json.email);
+    
+                setIsLoggedIn(true);
+    
+                navigate('/app');
+    
+            } else {
+                if (json.error) {
+                    setShowerr(json.error);
+                } else {
+                    setShowerr('Registration failed');
+                }
+            }
+    
+        } catch (e) {
+            console.log("Error fetching details: " + e.message);
+            setShowerr('Server error');
+        }
     };
 
     return (
@@ -77,6 +115,8 @@ function RegisterPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                             />
                         </div>
+
+                        {showerr && <div className="text-danger">{showerr}</div>}
 
                         {/* Register Button */}
                         <button
